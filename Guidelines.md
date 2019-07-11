@@ -3,7 +3,7 @@
 
 |                              |                                        |                                          |
 |:-----------------------------|:---------------------------------------|:-----------------------------------------|
-| Tom Abbott (Prod Architect)  | Karl Mcguinness (Chief Architect)      | Trevor Thompson (System Architect)       |
+| Tom Abbott (Prod Architect)  | Karl McGuinness (Chief Architect)      | Trevor Thompson (System Architect)       |
 
 
 <div style="font-size:150%">
@@ -120,9 +120,9 @@ This document establishes the guidelines Okta REST APIs SHOULD follow so RESTful
 
 ## 3 Introduction
 Developers access most Okta Cloud Platform resources via HTTP interfaces.
-Although the developer tooling team typically provides language-specific frameworks to wrap the APIs, all of their operations eventually boil down to HTTP requests.
+Although the developer tooling (developer experience) team typically provides language-specific frameworks to wrap the APIs, all of their operations eventually boil down to HTTP requests.
 Okta must support a wide range of clients and services and cannot rely on rich frameworks being available for every development environment.
-Thus a goal of these guidelines is to ensure Okta REST APIs can be easily and consistently consumed by any client with basic HTTP support.
+Thus a goal of these guidelines is to ensure Okta REST APIs can be easily and consistently consumed by any client with basic HTTP support.  To put it another way, the REST API surface area should be client agnostic.  It should not assume that one of Okta SDKs, or Okta applications are consuming it.
 
 To provide the smoothest possible experience for developers, integrators, and app teams, it's important to have these APIs follow consistent design guidelines, thus making using them easy and intuitive.
 This document establishes the guidelines to be followed by Okta REST API developers for developing such APIs consistently.
@@ -131,7 +131,7 @@ The benefits of consistency accrue in aggregate as well; consistency allows team
 
 These guidelines aim to achieve the following:
 - Define consistent practices and patterns for all API endpoints across Okta.
-- Adhere as closely as possible to accepted REST/HTTP best practices in the industry at-large.*
+- Adhere as closely as possible to accepted REST/HTTP *best practices in the industry at-large.*
 - Make accessing Okta Services via REST interfaces easy for all application developers.
 - Allow service developers to leverage the prior work of other services to implement, test and document REST endpoints defined consistently.
 - Allow for partners (e.g., non-Okta entities) to use these guidelines for their own REST endpoint design.
@@ -162,6 +162,8 @@ Obviously a REST service that implements or must interoperate with some external
 Some teams MAY also have special performance needs that require a different format, such as a binary protocol.
 
 ### 4.2 Guidelines for existing services and versioning of services
+Okta is currently operating on the first version of the API.  These guidelines are forward looking, as the need to version the API arises.
+
 It is not recommended to make a breaking change to a service that pre-dates these guidelines simply for compliance sake.
 The service SHOULD try to become compliant at the next version release when compatibility is being broken anyway.
 When a team adds a new API, that API SHOULD be consistent with the other APIs of the same version.
@@ -212,9 +214,6 @@ To ensure the best possible experience for clients talking to a REST service, cl
 ### 6.1 Ignore rule
 For loosely coupled clients where the exact shape of the data is not known before the call, if the server returns something the client wasn't expecting, the client MUST safely ignore it.
 
-Some services MAY add fields to responses without changing versions numbers.
-Services that do so MUST make this clear in their documentation and clients MUST ignore unknown fields.
-
 ### 6.2 Variable order rule
 Clients MUST NOT rely on the order in which data appears in JSON service responses.
 For example, clients SHOULD be resilient to the reordering of fields within a JSON object.
@@ -235,13 +234,13 @@ This facilitates discovery and eases adoption on platforms without a well-suppor
 An example of a well-structured URL is:
 
 ```
-https://tom.oktapreview.com/api/v1/users/00uol9oQZaWN47WQZ0g3
+https://example.okta.com/api/v1/users/00uol9oQZaWN47WQZ0g3
 ```
 
 An example URL that is not friendly is:
 
 ```
-https://tom.oktapreview.com/api/v1/('jdoe@okta.com')('AAMkADdiYzI1MjUzLTk4MjQtNDQ1Yy05YjJkLWNlMzMzYmIzNTY0MwAuAAAAAACzMsPHYH6HQoSwfdpDx-2bAQCXhUk6PC1dS7AERFluCgBfAAABo58UAAA=')
+https://example.okta.com/api/v1/('jdoe@okta.com')('AAMkADdiYzI1MjUzLTk4MjQtNDQ1Yy05YjJkLWNlMzMzYmIzNTY0MwAuAAAAAACzMsPHYH6HQoSwfdpDx-2bAQCXhUk6PC1dS7AERFluCgBfAAABo58UAAA=')
 ```
 
 
@@ -270,7 +269,7 @@ The stable identifier is not required to be a GUID.
 An example of a URL containing a canonical identifier is:
 
 ```
-https://tom.oktapreview.com/api/v1/users/00uol9oQZaWN47WQZ0g3
+https://example.okta.com/api/v1/users/00uol9oQZaWN47WQZ0g3
 ```
 
 ### 7.4 Supported methods
@@ -294,19 +293,19 @@ OPTIONS | Get information about a request; see below for details.               
 <small>Table 1</small>
 
 #### 7.4.1 POST
-POST operations SHOULD support the Location response header to specify the location of any created resource that was not explicitly named, via the Location header.
+POST operations SHOULD support the Location response header to specify the location of any created resource that was not explicitly named, via the Location header.  Creating resources with POST should be allowed on collection endpoints that allow creation of resources.
 
-As an example, imagine a service that allows creation of hosted servers, which will be named by the service:
+As an example, imagine a service that allows creation of a generic object with default properties:
 
 ```http
-POST https://tom.oktapreview.com/api/v1/users
+POST https://example.okta.com/api/v1/objects
 ```
 
 The response would be something like:
 
 ```http
 201 Created
-Location: https://tom.oktapreview.com/api/v1/users/00uol9oQZaWN47WQZ0g3
+Location: https://example.okta.com/api/v1/objects/00uol9oQZaWN47WQZ0g3
 ```
 
 Where "00uol9oQZaWN47WQZ0g3" is the service-allocated canonical identifier.
@@ -315,20 +314,25 @@ Services MAY also return the full metadata for the created resource in the respo
 
 #### 7.4.2 PATCH
 PATCH has been standardized by IETF as the method to be used for updating an existing object incrementally (see [RFC 5789][rfc-5789]).
-Okta REST API Guidelines compliant APIs SHOULD support PATCH.
+Okta REST API Guidelines compliant APIs SHOULD support PATCH for partial updates.
 
-#### 7.4.3 Creating resources via PATCH (UPSERT semantics)
-Services that allow callers to specify key values on create SHOULD support UPSERT semantics, and those that do MUST support creating resources using PATCH.
-Because PUT is defined as a complete replacement of the content, it is dangerous for clients to use PUT to modify data.
-Clients that do not understand (and hence ignore) properties on a resource are not likely to provide them on a PUT when trying to update a resource, hence such properties could be inadvertently removed.
-Services MAY optionally support PUT to update existing resources, but if they do they MUST use replacement semantics (that is, after the PUT, the resource's properties MUST match what was provided in the request, including deleting any server properties that were not provided).
+PATCH body SHOULD conform to [JSON Patch](https://tools.ietf.org/html/rfc6902)
 
-Under UPSERT semantics, a PATCH call to a nonexistent resource is handled by the server as a "create," and a PATCH call to an existing resource is handled as an "update." To ensure that an update request is not treated as a create or vice-versa, the client MAY specify precondition HTTP headers in the request.
 The service MUST NOT treat a PATCH request as an insert if it contains an If-Match header and MUST NOT treat a PATCH request as an update if it contains an If-None-Match header with a value of `asterisk` (U+2217).
 
-If a service does not support UPSERT, then a PATCH call against a resource that does not exist MUST result in an HTTP "409 Conflict" error.
+PATCH should not be used for resource UPSERT scenarios. Meaning, creating resources must be done on POST to a collection resource.  [JSON Patch](https://tools.ietf.org/html/rfc6902) provides UPSERT functionality for properties of a resource.
 
-#### 7.4.4 Options and link headers
+A PATCH call against a resource that does not exist MUST result in an HTTP "409 Conflict" error.
+
+#### 7.4.3 PUT
+
+Because PUT is defined as a complete replacement of the content, it is dangerous for clients to use PUT to modify data.
+Clients that do not understand (and hence ignore) properties on a resource are not likely to provide them on a PUT when trying to update a resource, hence such properties could be inadvertently removed.
+
+Services MAY optionally support PUT to update existing resources, but if they do they MUST use replacement semantics (that is, after the PUT, the resource's properties MUST match what was provided in the request, including deleting any server properties that were not provided).
+
+
+#### 7.4.4 OPTIONS and link headers
 OPTIONS allows a client to retrieve information about a resource, at a minimum by returning the Allow header denoting the valid methods for this resource.
 
 In addition, services SHOULD include a Link header (see [RFC 5988][rfc-5988]) to point to documentation for the resource in question:
@@ -395,28 +399,23 @@ The criteria for considering when to accept headers as parameters are:
 
 1. Any custom headers MUST be also accepted as parameters.
 2. Required standard headers MAY be accepted as parameters.
-3. Required headers with security sensitivity (e.g., Authorization header) MIGHT NOT be appropriate as parameters; the service owner SHOULD evaluate these on a case-by-case basis.
+3. Required headers with security sensitivity (e.g., Authorization header) MIGHT NOT be appropriate as parameters; the service owner SHOULD evaluate these on a case-by-case basis.  For example, protocols MAY specify sensitive headers can be also used in query parameters (OAuth 2.0, for example).
 
-The one exception to this rule is the Accept header.
-It's common practice to use a scheme with simple names instead of the full functionality described in the HTTP specification for Accept.
 
 ### 7.9 PII parameters
 Consistent with their organization's privacy policy, clients SHOULD NOT transmit personally identifiable information (PII) parameters in the URL (as part of path or query string) because this information can be inadvertently exposed via client, network, and server logs and other mechanisms.
 
-Consequently, a service SHOULD accept PII parameters transmitted as headers.
-
 However, there are many scenarios where the above recommendations cannot be followed due to client or software limitations.
 To address these limitations, services SHOULD also accept these PII parameters as part of the URL consistent with the rest of these guidelines.
 
-Services that accept PII parameters -- whether in the URL or as headers -- SHOULD be compliant with privacy policy specified by their organization's engineering leadership.
-This will typically include recommending that clients prefer headers for transmission and implementations adhere to special precautions to ensure that logs and other service data collection are properly handled.
+Services that accept PII parameters -- whether in the URL or as headers -- SHOULD be compliant with privacy policy specified by their organization's engineering leadership. This will typically include recommending that clients prefer headers for transmission and implementations adhere to special precautions to ensure that logs and other service data collection are properly handled.
 
 ### 7.10 Response formats
 For organizations to have a successful platform, they must serve data in formats developers are accustomed to using, and in consistent ways that allow developers to handle responses with common code.
 
 Web-based communication, especially when a mobile or other low-bandwidth client is involved, has moved quickly in the direction of JSON for a variety of reasons, including its tendency to be lighter weight and its ease of consumption with JavaScript-based clients.
 
-JSON property names SHOULD be camelCased.
+JSON property names SHOULD be camelCased.  There are cases where properties MAY be snake_cased to emulate protocol configuration.
 
 Services SHOULD provide JSON as the default encoding.
 
@@ -432,146 +431,108 @@ Accept Header    | Response type                      | Notes
 application/json | Payload SHOULD be returned as JSON | Also accept text/javascript for JSONP cases
 
 ```http
-GET https://api.contoso.com/v1.0/products/user
+GET https://example.okta.com/api/v1/products
 Accept: application/json
 ```
 
 #### 7.10.2 Error condition responses
 For nonsuccess conditions, developers SHOULD be able to write one piece of code that handles errors consistently across different Okta REST API Guidelines services.
+
 This allows building of simple and reliable infrastructure to handle exceptions as a separate flow from successful responses.
-The following is based on the OData v4 JSON spec.
-However, it is very generic and does not require specific OData constructs.
-APIs SHOULD use this format even if they are not using other OData constructs.
 
 The error response MUST be a single JSON object.
-This object MUST have a name/value pair named "error." The value MUST be a JSON object.
 
-This object MUST contain name/value pairs with the names "code" and "message," and it MAY contain name/value pairs with the names "target," "details" and "innererror."
+This object MUST contain name/value pairs with the names "errorCode", "errorSummary", "errorId", "errorCauses", and it MAY contain name/value pairs with the names "errorLink".
 
-The value for the "code" name/value pair is a language-independent string.
-Its value is a service-defined error code that SHOULD be human-readable.
-This code serves as a more specific indicator of the error than the HTTP error code specified in the response.
-Services SHOULD have a relatively small number (about 20) of possible values for "code," and all clients MUST be capable of handling all of them.
-Most services will require a much larger number of more specific error codes, which are not interesting to all clients.
-These error codes SHOULD be exposed in the "innererror" name/value pair as described below.
-Introducing a new value for "code" that is visible to existing clients is a breaking change and requires a version increase.
-Services can avoid breaking changes by adding new error codes to "innererror" instead.
+The value for the "errorCode" name/value pair is a language-independent string that maps to an [Okta Error Code](https://developer.okta.com/docs/reference/error-codes/). Its value is a service-defined error code that SHOULD be human-readable. This code serves as a more specific indicator of the error than the HTTP error code specified in the response. Services SHOULD have a relatively small number (about 20) of possible values for "code," and all clients MUST be capable of handling all of them.
 
-The value for the "message" name/value pair MUST be a human-readable representation of the error.
-It is intended as an aid to developers and is not suitable for exposure to end users.
-Services wanting to expose a suitable message for end users MUST do so through an [annotation][odata-json-annotations] or custom property.
-Services SHOULD NOT localize "message" for the end user, because doing so MAY make the value unreadable to the app developer who may be logging the value, as well as make the value less searchable on the Internet.
+Most services will require a much larger number of more specific error codes, which are not interesting to all clients. These error codes SHOULD be exposed in the "errorCauses" property as described below under the "reason" property.  
 
-The value for the "target" name/value pair is the target of the particular error (e.g., the name of the property in error).
+Unrelated services MAY reuse "errorCodes" from other services.
 
-The value for the "details" name/value pair MUST be an array of JSON objects that MUST contain name/value pairs for "code" and "message," and MAY contain a name/value pair for "target," as described above.
-The objects in the "details" array usually represent distinct, related errors that occurred during the request.
-See example below.
+The value for the "errorSummary" property MUST be a human-readable representation of the error. It is intended as an aid to developers and MAY be suitable for exposure to end users.  Because of this, services MUST understand if the API is leveraged as a platform or infrastructure component that is exposed to end users and MUST NOT add verbiage related to the Okta product in this case.
 
-The value for the "innererror" name/value pair MUST be an object.
-The contents of this object are service-defined.
-Services wanting to return more specific errors than the root-level code MUST do so by including a name/value pair for "code" and a nested "innererror." Each nested "innererror" object represents a higher level of detail than its parent.
-When evaluating errors, clients MUST traverse through all of the nested "innererrors" and choose the deepest one that they understand.
-This scheme allows services to introduce new error codes anywhere in the hierarchy without breaking backwards compatibility, so long as old error codes still appear.
-The service MAY return different levels of depth and detail to different callers.
-For example, in development environments, the deepest "innererror" MAY contain internal information that can help debug the service.
+Services SHOULD NOT localize "errorSummary" for the end user, because doing so MAY make the value unreadable to the app developer who may be logging the value, as well as make the value less searchable on the Internet.  Client SHOULD leverage "errorCauses" to understand and localize the error for the end user.
+
+The value for "errorId" is a correlation to the System Log event for additional information.
+
+The value for "errorLink" MUST be a URI to more information about the error code.
+
+Services wanting to return more specific errors than the root-level code MUST do so by including an "errorCode" and a nested "errorCauses." The value for the "errorCauses" property pair MUST be an array. Each item in "errorCauses" array represents a lower level of detail than its parent.
+
+When evaluating errors, clients MUST iterate through all of the items in "errorCauses".
+
 To guard against potential security concerns around information disclosure, services SHOULD take care not to expose too much detail unintentionally.
+
 Error objects MAY also include custom server-defined name/value pairs that MAY be specific to the code.
-Error types with custom server-defined properties SHOULD be declared in the service's metadata document.
-See example below.
-
-Error responses MAY contain [annotations][odata-json-annotations] in any of their JSON objects.
-
-We recommend that for any transient errors that may be retried, services SHOULD include a Retry-After HTTP header indicating the minimum number of seconds that clients SHOULD wait before attempting the operation again.
-
-##### ErrorResponse : Object
-
-Property | Type | Required | Description
--------- | ---- | -------- | -----------
-`error` | Error | ✔ | The error object.
 
 ##### Error : Object
 
 Property | Type | Required | Description
 -------- | ---- | -------- | -----------
-`code` | String (enumerated) | ✔ | One of a server-defined set of error codes.
-`message` | String | ✔ | A human-readable representation of the error.
-`target` | String |  | The target of the error.
-`details` | Error[] |  | An array of details about specific errors that led to this reported error.
-`innererror` | InnerError |  | An object containing more specific information than the current object about the error.
+`errorCode` | String (enumerated) | ✔ | One of a server-defined set of error codes.
+`errorId` | String (id) | ✔ | A correlation ID to the event in Syslog.
+`errorSummary` | String | ✔ | A human-readable representation of the error.
+`errorLink` | String |  | A uri to more information about the error.
+`errorCauses` | ErrorCauses[] |  | An array of details about specific errors that led to this reported error.
 
-##### InnerError : Object
+##### errorCauses : Object
 
 Property | Type | Required | Description
 -------- | ---- | -------- | -----------
-`code` | String |  | A more specific error code than was provided by the containing error.
-`innererror` | InnerError |  | An object containing more specific information than the current object about the error.
+`errorSummary` | String | ✔ | A more specific error code than was provided by the containing error.
+`reason` | String (enumerated) | ✔ | An object containing more specific information than the current object about the error.
+`locationType` | String (enumerated) |  | An object containing more specific information than the current object about the error.
+`location` | String (enumerated) |  | An object containing more specific information than the current object about the error.
+`domain` | String (enumerated) | ✔ | An object containing more specific information than the current object about the error.
 
 ##### Examples
 
-Example of "innererror":
+Example:
 
 ```json
 {
-  "error": {
-    "code": "BadArgument",
-    "message": "Previous passwords may not be reused",
-    "target": "password",
-    "innererror": {
-      "code": "PasswordError",
-      "innererror": {
-        "code": "PasswordDoesNotMeetPolicy",
-        "minLength": "6",
-        "maxLength": "64",
-        "characterTypes": ["lowerCase","upperCase","number","symbol"],
-        "minDistinctCharacterTypes": "2",
-        "innererror": {
-          "code": "PasswordReuseNotAllowed"
+    "errorCode": "E0000014",
+    "errorSummary": "Password requirements were not met. Your password must have at least 8 characters, a lowercase letter, an uppercase letter, a number.",
+    "errorLink": "E0000014",
+    "errorId": "oaeWCGz73hpRCG75VHP6-RRXw",
+    "errorCauses": [
+        {
+            "errorSummary": "Your password must have at least 8 characters",
+            "reason": "LENGTH_MINIMUM",
+            "locationType": "body",
+            "location": "credentials.password",
+            "domain": "user"
+        },
+        {
+            "errorSummary": "Your password must have a lowercase letter",
+            "reason": "LOWERCASE_REQUIRED",
+            "locationType": "body",
+            "location": "credentials.password",
+            "domain": "user"
+        },
+        {
+            "errorSummary": "Your password must have a uppercase letter",
+            "reason": "UPPERCASE_REQUIRED",
+            "locationType": "body",
+            "location": "credentials.password",
+            "domain": "user"
+        },
+        {
+            "errorSummary": "Your password must have a number",
+            "reason": "NUMBER_REQUIRED",
+            "locationType": "body",
+            "location": "credentials.password",
+            "domain": "user"
         }
-      }
-    }
-  }
-}
-```
-
-In this example, the most basic error code is "BadArgument," but for clients that are interested, there are more specific error codes in "innererror."
-The "PasswordReuseNotAllowed" code may have been added by the service at a later date, having previously only returned "PasswordDoesNotMeetPolicy."
-Existing clients do not break when the new error code is added, but new clients MAY take advantage of it.
-The "PasswordDoesNotMeetPolicy" error also includes additional name/value pairs that allow the client to determine the server's configuration, validate the user's input programmatically, or present the server's constraints to the user within the client's own localized messaging.
-
-Example of "details":
-
-```json
-{
-  "error": {
-    "code": "BadArgument",
-    "message": "Multiple errors in ContactInfo data",
-    "target": "ContactInfo",
-    "details": [
-      {
-        "code": "NullValue",
-        "target": "PhoneNumber",
-        "message": "Phone number must not be null"
-      },
-      {
-        "code": "NullValue",
-        "target": "LastName",
-        "message": "Last name must not be null"
-      },
-      {
-        "code": "MalformedValue",
-        "target": "Address",
-        "message": "Address is not valid"
-      }
     ]
-  }
 }
 ```
 
-In this example there were multiple problems with the request, with each individual error listed in "details."
+In this example there were multiple problems with the request, with each individual error listed in "errorCauses".
 
 ### 7.11 HTTP Status Codes
-Standard HTTP Status Codes SHOULD be used; see the HTTP Status Code definitions for more information.
+Standard HTTP Status Codes MUST be used; see the HTTP Status Code definitions for more information.
 
 ### 7.12 Client library optional
 Developers MUST be able to develop on a wide variety of platforms and languages, such as Windows, macOS, Linux, C#, Python, Node.js, and Ruby.
@@ -606,7 +567,7 @@ For any other headers or values, a preflight request will happen.
 - Understand the Origin request header that browsers send on cross-domain requests, and the Access-Control-Request-Method request header that they send on preflight OPTIONS requests that check for access.
 - If the Origin header is present in a request:
   - If the request uses the OPTIONS method and contains the Access-Control-Request-Method header, then it is a preflight request intended to probe for access before the actual request. Otherwise, it is an actual request. For preflight requests, beyond performing the steps below to add headers, services MUST perform no additional processing and MUST return a 200 OK. For non-preflight requests, the headers below are added in addition to the request's regular processing.
-  - Add an Access-Control-Allow-Origin header to the response, containing the same value as the Origin request header. Note that this requires services to dynamically generate the header value. Resources that do not require cookies or any other form of [user credentials][cors-user-credentials] MAY respond with a wildcard asterisk (*) instead. Note that the wildcard is acceptable here only, and not for any of the other headers described below.
+  - Add an Access-Control-Allow-Origin header to the response, containing the same value as the Origin request header. Note that this requires services to dynamically generate the header value. Resources that do not require cookies or any other form of [user credentials][cors-user-credentials] MAY respond with a wildcard asterisk (\*) instead. Note that the wildcard is acceptable here only, and not for any of the other headers described below.
   - If the caller requires access to a response header that is not in the set of [simple response headers][cors-simple-headers] (Cache-Control, Content-Language, Content-Type, Expires, Last-Modified, Pragma), then add an Access-Control-Expose-Headers header containing the list of additional response header names the client should have access to.
   - If the request requires cookies, then add an Access-Control-Allow-Credentials header set to "true."
   - If the request was a preflight request (see first bullet), then the service MUST:
@@ -646,7 +607,7 @@ Collections are located directly under the service root when they are top level,
 For example:
 
 ```http
-GET https://api.contoso.com/v1.0/people
+GET https://example.okta.com/v1.0/people
 ```
 
 Whenever possible, services MUST support the "/" pattern.
@@ -666,7 +627,7 @@ Collection items MAY contain other collections.
 For example, a user collection MAY contain user resources that have multiple addresses:
 
 ```http
-GET https://api.contoso.com/v1.0/people/123/addresses
+GET https://example.okta.com/v1.0/people/123/addresses
 ```
 
 ```json
@@ -706,27 +667,27 @@ This is often the case for insert operations on items with a server-side generat
 For example, the following request:
 
 ```http
-POST https://api.contoso.com/v1.0/people
+POST https://example.okta.com/v1.0/people
 ```
 
 Would lead to a response indicating the location of the new collection item:
 
 ```http
 201 Created
-Location: https://api.contoso.com/v1.0/people/123
+Location: https://example.okta.com/v1.0/people/123
 ```
 
 And once executed again, would likely lead to another resource:
 
 ```http
 201 Created
-Location: https://api.contoso.com/v1.0/people/124
+Location: https://example.okta.com/v1.0/people/124
 ```
 
 While a PUT request would require the indication of the collection item with the corresponding key instead:
 
 ```http
-PUT https://api.contoso.com/v1.0/people/123
+PUT https://example.okta.com/v1.0/people/123
 ```
 
 ### 9.6 Sorting collections
@@ -747,7 +708,7 @@ The sort order is the inherent order for the type of the property.
 For example:
 
 ```http
-GET https://api.contoso.com/v1.0/people?$orderBy=name
+GET https://example.okta.com/v1.0/people?$orderBy=name
 ```
 
 Will return all people sorted by name in ascending order.
@@ -755,7 +716,7 @@ Will return all people sorted by name in ascending order.
 For example:
 
 ```http
-GET https://api.contoso.com/v1.0/people?$orderBy=name desc
+GET https://example.okta.com/v1.0/people?$orderBy=name desc
 ```
 
 Will return all people sorted by name in descending order.
@@ -765,7 +726,7 @@ Sub-sorts can be specified by a comma-separated list of property names with OPTI
 For example:
 
 ```http
-GET https://api.contoso.com/v1.0/people?$orderBy=name desc,hireDate
+GET https://example.okta.com/v1.0/people?$orderBy=name desc,hireDate
 ```
 
 Will return all people sorted by name in descending order and a secondary sort order of hireDate in ascending order.
@@ -773,7 +734,7 @@ Will return all people sorted by name in descending order and a secondary sort o
 Sorting MUST compose with filtering such that:
 
 ```http
-GET https://api.contoso.com/v1.0/people?$filter=name eq 'david'&$orderBy=hireDate
+GET https://example.okta.com/v1.0/people?$filter=name eq 'david'&$orderBy=hireDate
 ```
 
 Will return all people whose name is David sorted in ascending order by hireDate.
@@ -791,7 +752,7 @@ Resources for which the expression evaluates to false or to null, or which refer
 Example: return all Products whose Price is less than $10.00
 
 ```http
-GET https://api.contoso.com/v1.0/products?$filter=price lt 10.00
+GET https://example.okta.com/v1.0/products?$filter=price lt 10.00
 ```
 
 The value of the _$filter_ option is a Boolean expression.
@@ -821,31 +782,31 @@ The following examples illustrate the use and semantics of each of the logical o
 Example: all products with a name equal to 'Milk'
 
 ```http
-GET https://api.contoso.com/v1.0/products?$filter=name eq 'Milk'
+GET https://example.okta.com/v1.0/products?$filter=name eq 'Milk'
 ```
 
 Example: all products with a name not equal to 'Milk'
 
 ```http
-GET https://api.contoso.com/v1.0/products?$filter=name ne 'Milk'
+GET https://example.okta.com/v1.0/products?$filter=name ne 'Milk'
 ```
 
 Example: all products with the name 'Milk' that also have a price less than 2.55:
 
 ```http
-GET https://api.contoso.com/v1.0/products?$filter=name eq 'Milk' and price lt 2.55
+GET https://example.okta.com/v1.0/products?$filter=name eq 'Milk' and price lt 2.55
 ```
 
 Example: all products that either have the name 'Milk' or have a price less than 2.55:
 
 ```http
-GET https://api.contoso.com/v1.0/products?$filter=name eq 'Milk' or price lt 2.55
+GET https://example.okta.com/v1.0/products?$filter=name eq 'Milk' or price lt 2.55
 ```
 
 Example 54: all products that have the name 'Milk' or 'Eggs' and have a price less than 2.55:
 
 ```http
-GET https://api.contoso.com/v1.0/products?$filter=(name eq 'Milk' or name eq 'Eggs') and price lt 2.55
+GET https://example.okta.com/v1.0/products?$filter=(name eq 'Milk' or name eq 'Eggs') and price lt 2.55
 ```
 
 #### 9.7.3 Operator precedence
@@ -885,7 +846,7 @@ Clients MUST treat the continuation URL as opaque, which means that query option
 Example:
 
 ```http
-GET http://api.contoso.com/v1.0/people HTTP/1.1
+GET http://example.okta.com/v1.0/people HTTP/1.1
 Accept: application/json
 
 HTTP/1.1 200 OK
@@ -911,7 +872,7 @@ This will avoid the risk of the client making assumptions about the data returne
 Example:
 
 ```http
-GET http://api.contoso.com/v1.0/people?$top=5&$skip=2 HTTP/1.1
+GET http://example.okta.com/v1.0/people?$top=5&$skip=2 HTTP/1.1
 Accept: application/json
 
 HTTP/1.1 200 OK
@@ -982,7 +943,7 @@ A delta link is obtained by querying a collection or entity and appending a $del
 For example:
 
 ```http
-GET https://api.contoso.com/v1.0/people?$delta
+GET https://example.okta.com/v1.0/people?$delta
 HTTP/1.1
 Accept: application/json
 
@@ -1189,8 +1150,8 @@ For example, to repeat the interval of "P1Y2M10DT2H30M" five times starting at "
 Services are versioned using a Major.Minor versioning scheme.
 Services MAY opt for a "Major" only version scheme in which case the ".0" is implied and all other rules in this section apply.
 Two options for specifying the version of a REST API request are supported:
-- Embedded in the path of the request URL, at the end of the service root: `https://api.contoso.com/v1.0/products/users`
-- As a query string parameter of the URL: `https://api.contoso.com/products/users?api-version=1.0`
+- Embedded in the path of the request URL, at the end of the service root: `https://example.okta.com/v1.0/products/users`
+- As a query string parameter of the URL: `https://example.okta.com/products/users?api-version=1.0`
 
 Guidance for choosing between the two options is as follows:
 
@@ -1237,11 +1198,11 @@ Clients can specify either the group version or the Major.Minor version:
 For example:
 
 ```http
-GET http://api.contoso.com/acct1/c1/blob2?api-version=1.0
+GET http://example.okta.com/acct1/c1/blob2?api-version=1.0
 ```
 
 ```http
-PUT http://api.contoso.com/acct1/c1/b2?api-version=2011-12-07
+PUT http://example.okta.com/acct1/c1/b2?api-version=2011-12-07
 ```
 
 ### 12.2 When to version
@@ -1298,7 +1259,7 @@ While most operations are likely to be POST semantics, In addition to POST seman
 For example, a user that wants to create a database named "db1" could call:
 
 ```http
-PUT https://api.contoso.com/v1.0/databases/db1
+PUT https://example.okta.com/v1.0/databases/db1
 ```
 
 In this scenario the databases segment is processing the PUT operation.
@@ -1325,14 +1286,14 @@ In other words, APIs must adopt and stick with a LRO pattern and not change patt
 Services MAY enable PUT requests for entity creation.
 
 ```http
-PUT https://api.contoso.com/v1.0/databases/db1
+PUT https://example.okta.com/v1.0/databases/db1
 ```
 
 In this scenario the _databases_ segment is processing the PUT operation.
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: https://api.contoso.com/v1.0/operations/123
+Operation-Location: https://example.okta.com/v1.0/operations/123
 ```
 
 For services that need to return a 201 Created here, use the hybrid flow described below.
@@ -1344,7 +1305,7 @@ The 201 Created case should return the body of the target resource.
 Services MAY enable POST requests for entity creation.
 
 ```http
-POST https://api.contoso.com/v1.0/databases/
+POST https://example.okta.com/v1.0/databases/
 
 {
   "fileName": "someFile.db",
@@ -1354,7 +1315,7 @@ POST https://api.contoso.com/v1.0/databases/
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: https://api.contoso.com/v1.0/operations/123
+Operation-Location: https://example.okta.com/v1.0/operations/123
 ```
 
 #### 13.2.3 POST, hybrid model
@@ -1364,8 +1325,8 @@ In order to use this pattern, the response MUST include a representation of the 
 For example:
 
 ```http
-POST https://api.contoso.com/v1.0/databases/ HTTP/1.1
-Host: api.contoso.com
+POST https://example.okta.com/v1.0/databases/ HTTP/1.1
+Host: example.okta.com
 Content-Type: application/json
 Accept: application/json
 
@@ -1380,8 +1341,8 @@ In this case the status property in the response payload also indicates the oper
 
 ```http
 HTTP/1.1 201 Created
-Location: https://api.contoso.com/v1.0/databases/db1
-Operation-Location: https://api.contoso.com/v1.0/operations/123
+Location: https://example.okta.com/v1.0/databases/db1
+Operation-Location: https://example.okta.com/v1.0/operations/123
 
 {
   "databaseName": "db1",
@@ -1474,7 +1435,7 @@ For operations that result in, or manipulate, a resource the service MUST includ
   "createdDateTime": "2015-06-19T12-01-03.45Z",
   "lastActionDateTime": "2015-06-19T12-06-03.0024Z",
   "status": "succeeded",
-  "resourceLocation": "https://api.contoso.com/v1.0/databases/db1"
+  "resourceLocation": "https://example.okta.com/v1.0/databases/db1"
 }
 ```
 
@@ -1491,7 +1452,7 @@ Services MAY choose to delete tombstones after a service defined period of time.
 Client invokes the restart action:
 
 ```http
-POST https://api.contoso.com/v1.0/databases HTTP/1.1
+POST https://example.okta.com/v1.0/databases HTTP/1.1
 Accept: application/json
 
 {
@@ -1504,13 +1465,13 @@ The server response indicates the request has been created.
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: https://api.contoso.com/v1.0/operations/123
+Operation-Location: https://example.okta.com/v1.0/operations/123
 ```
 
 Client waits for a period of time then invokes another request to try to get the operation status.
 
 ```http
-GET https://api.contoso.com/v1.0/operations/123
+GET https://example.okta.com/v1.0/operations/123
 Accept: application/json
 ```
 
@@ -1529,7 +1490,7 @@ Retry-After: 30
 Client waits the recommended 30 seconds and then invokes another request to get the results of the operation.
 
 ```http
-GET https://api.contoso.com/v1.0/operations/123
+GET https://example.okta.com/v1.0/operations/123
 Accept: application/json
 ```
 
@@ -1543,7 +1504,7 @@ Content-Type: application/json
   "createdDateTime": "2015-06-19T12-01-03.45Z",
   "lastActionDateTime": "2015-06-19T12-06-03.0024Z",
   "status": "succeeded",
-  "resourceLocation": "https://api.contoso.com/v1.0/databases/db1"
+  "resourceLocation": "https://example.okta.com/v1.0/databases/db1"
 }
 ```
 
@@ -1558,7 +1519,7 @@ Client invokes the backup action.
 The client already has a push notification subscription setup for db1.
 
 ```http
-POST https://api.contoso.com/v1.0/databases/db1?backup HTTP/1.1
+POST https://example.okta.com/v1.0/databases/db1?backup HTTP/1.1
 Accept: application/json
 ```
 
@@ -1566,7 +1527,7 @@ The server response indicates the request has been accepted.
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: https://api.contoso.com/v1.0/operations/123
+Operation-Location: https://example.okta.com/v1.0/operations/123
 ```
 
 The caller ignores all the headers in the return.
@@ -1582,7 +1543,7 @@ Content-Type: application/json
     {
       "subscriptionId": "1234-5678-1111-2222",
       "context": "subscription context that was specified at setup",
-      "resourceUrl": "https://api.contoso.com/v1.0/databases/db1",
+      "resourceUrl": "https://example.okta.com/v1.0/databases/db1",
       "userId" : "contoso.com/user@contoso.com",
       "tenantId" : "contoso.com"
     }
@@ -1597,7 +1558,7 @@ The HTTP specification allows the Retry-After header to alternatively specify a 
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: http://api.contoso.com/v1.0/operations/123
+Operation-Location: http://example.okta.com/v1.0/operations/123
 Retry-After: 60
 ```
 
@@ -1736,7 +1697,7 @@ For a firehose subscription, a concrete example of this may look like:
   "value": [
     {
       "subscriptionId": "32b8cbd6174ab18b",
-      "resource": "https://api.contoso.com/v1.0/users/user@contoso.com/files?$delta",
+      "resource": "https://example.okta.com/v1.0/users/user@contoso.com/files?$delta",
       "userId" : "<User GUID>",
       "tenantId" : "<Tenant Id>"
     }
@@ -1753,7 +1714,7 @@ For a per-user subscription, a concrete example of this may look like:
       "subscriptionId": "32b8cbd6174ab183",
       "clientState": "clientOriginatedOpaqueToken",
       "expirationDateTime": "2016-02-04T11:23Z",
-      "resource": "https://api.contoso.com/v1.0/users/user@contoso.com/files/$delta",
+      "resource": "https://example.okta.com/v1.0/users/user@contoso.com/files/$delta",
       "userId" : "<User GUID>",
       "tenantId" : "<Tenant Id>"
     },
@@ -1761,7 +1722,7 @@ For a per-user subscription, a concrete example of this may look like:
       "subscriptionId": "97b391179fa22",
       "clientState ": "clientOriginatedOpaqueToken",
       "expirationDateTime": "2016-02-04T11:23Z",
-      "resource": "https://api.contoso.com/v1.0/users/user@contoso.com/files/$delta",
+      "resource": "https://example.okta.com/v1.0/users/user@contoso.com/files/$delta",
       "userId" : "<User GUID>",
       "tenantId" : "<Tenant Id>"
     }
@@ -1797,7 +1758,7 @@ A client creates a subscription by issuing a POST request against the subscripti
 The subscription namespace is client-defined via the POST operation.
 
 ```
-https://api.contoso.com/apiVersion/$subscriptions
+https://example.okta.com/apiVersion/$subscriptions
 ```
 
 The POST request contains a single subscription object to be created.
@@ -1822,7 +1783,7 @@ The combination of properties scoped to the auth token, provides a uniqueness co
 Below is an example request using a User + Application principal to subscribe to notifications from a file:
 
 ```http
-POST https://api.contoso.com/files/v1.0/$subscriptions HTTP 1.1
+POST https://example.okta.com/files/v1.0/$subscriptions HTTP 1.1
 Authorization: Bearer {UserPrincipalBearerToken}
 
 {
@@ -1844,7 +1805,7 @@ The service SHOULD respond to such a message with a response format minimally li
 Below is an example using an Application-Only principal where the application is watching all files to which it's authorized:
 
 ```http
-POST https://api.contoso.com/files/v1.0/$subscriptions HTTP 1.1
+POST https://example.okta.com/files/v1.0/$subscriptions HTTP 1.1
 Authorization: Bearer {ApplicationPrincipalBearerToken}
 
 {
@@ -1874,7 +1835,7 @@ As with creation, subscriptions are individually managed.
 The following request changes the notification URL of an existing subscription:
 
 ```http
-PATCH https://api.contoso.com/files/v1.0/$subscriptions/{id} HTTP 1.1
+PATCH https://example.okta.com/files/v1.0/$subscriptions/{id} HTTP 1.1
 Authorization: Bearer {UserPrincipalBearerToken}
 
 {
@@ -1896,7 +1857,7 @@ Services MUST support deleting subscriptions.
 Existing subscriptions can be deleted by making a DELETE request against the subscription resource:
 
 ```http
-DELETE https://api.contoso.com/files/v1.0/$subscriptions/{id} HTTP 1.1
+DELETE https://example.okta.com/files/v1.0/$subscriptions/{id} HTTP 1.1
 Authorization: Bearer {UserPrincipalBearerToken}
 ```
 
@@ -1906,7 +1867,7 @@ As with update, the service MUST return `204 No Content` for a successful delete
 To get a list of active subscriptions, clients issue a GET request against the subscriptions resource using a User + Application or Application-Only bearer token:
 
 ```http
-GET https://api.contoso.com/files/v1.0/$subscriptions HTTP 1.1
+GET https://example.okta.com/files/v1.0/$subscriptions HTTP 1.1
 Authorization: Bearer {UserPrincipalBearerToken}
 ```
 
@@ -1917,7 +1878,7 @@ The service MUST return a format as below using a User + Application principal b
   "value": [
     {
       "id": "32b8cbd6174ab18b",
-      "resource": " http://api.contoso.com/v1.0/files/file1.txt",
+      "resource": " http://example.okta.com/v1.0/files/file1.txt",
       "notificationUrl": "https://contoso.com/myCallbacks",
       "clientState": "clientOriginatedOpaqueToken",
       "expirationDateTime": "2016-02-04T11:23Z"
@@ -1969,12 +1930,12 @@ Similarly, some APIs will expose collections but require or otherwise limit filt
 ### 15.2 Feature allow list
 If a service does not support any of the below API features, then an error response MUST be provided if the feature is requested by a caller.
 The features are:
-- Key Addressing in a collection, such as: `https://api.contoso.com/v1.0/people/user1@contoso.com`
-- Filtering a collection by a property value, such as: `https://api.contoso.com/v1.0/people?$filter=name eq 'david'`
-- Filtering a collection by range, such as: `http://api.contoso.com/v1.0/people?$filter=hireDate ge 2014-01-01 and hireDate le 2014-12-31`
-- Client-driven pagination via $top and $skip, such as: `http://api.contoso.com/v1.0/people?$top=5&$skip=2`
-- Sorting by $orderBy, such as: `https://api.contoso.com/v1.0/people?$orderBy=name desc`
-- Providing $delta tokens, such as: `https://api.contoso.com/v1.0/people?$delta`
+- Key Addressing in a collection, such as: `https://example.okta.com/v1.0/people/user1@contoso.com`
+- Filtering a collection by a property value, such as: `https://example.okta.com/v1.0/people?$filter=name eq 'david'`
+- Filtering a collection by range, such as: `http://example.okta.com/v1.0/people?$filter=hireDate ge 2014-01-01 and hireDate le 2014-12-31`
+- Client-driven pagination via $top and $skip, such as: `http://example.okta.com/v1.0/people?$top=5&$skip=2`
+- Sorting by $orderBy, such as: `https://example.okta.com/v1.0/people?$orderBy=name desc`
+- Providing $delta tokens, such as: `https://example.okta.com/v1.0/people?$delta`
 
 #### 15.2.1 Error response
 Services MUST provide an error response if a caller requests an unsupported feature found in the feature allow list.
@@ -1985,7 +1946,7 @@ Services SHOULD include enough detail in the response message for a developer to
 Example:
 
 ```http
-GET https://api.contoso.com/v1.0/people?$orderBy=name HTTP/1.1
+GET https://example.okta.com/v1.0/people?$orderBy=name HTTP/1.1
 Accept: application/json
 ```
 
