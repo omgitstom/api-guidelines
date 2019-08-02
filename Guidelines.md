@@ -343,6 +343,8 @@ Link: <{help}>; rel="help"
 
 Where {help} is the URL to a documentation resource.
 
+Services MAY return additional Link headers to represent more information about a resource.  Common headers could represent collection information, for example.
+
 For examples on use of OPTIONS, see [preflighting CORS cross-domain calls][cors-preflight].
 
 ### 7.5 Standard request headers
@@ -356,10 +358,10 @@ Header                            | Type                                  | Desc
 --------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Authorization                     | String                                           | Authorization header for the request
 Date                              | Date                                             | Timestamp of the request, based on the client's clock, in [RFC 5322][rfc-5322-3-3] date and time format.  The server SHOULD NOT make any assumptions about the accuracy of the client's clock.  This header MAY be included in the request, but MUST be in this format when supplied.  Greenwich Mean Time (GMT) MUST be used as the time zone reference for this header when it is provided.  For example: `Wed, 24 Aug 2016 18:41:30 GMT`.  Note that GMT is exactly equal to UTC (Coordinated Universal Time) for this purpose.
-Accept                            | Content type                                     | The requested content type for the response such as: <ul><li>application/xml</li><li>text/xml</li><li>application/json</li><li>text/javascript (for JSONP)</li></ul>Per the HTTP guidelines, this is just a hint and responses MAY have a different content type, such as a blob fetch where a successful response will just be the blob stream as the payload. For services following OData, the preference order specified in OData SHOULD be followed.
+Accept                            | Content type                                     | The requested content type for the response such as: <ul><li>application/xml</li><li>text/xml</li><li>application/json</li><li>text/javascript (for JSONP)</li></ul>Per the HTTP guidelines, this is just a hint and responses MAY have a different content type, such as a blob fetch where a successful response will just be the blob stream as the payload.
 Accept-Encoding                   | Gzip, deflate                                    | REST endpoints SHOULD support GZIP and DEFLATE encoding, when applicable. For very large resources, services MAY ignore and return uncompressed data.
 Accept-Language                   | "en", "es", etc.                                 | Specifies the preferred language for the response. Services are not required to support this, but if a service supports localization it MUST do so through the Accept-Language header.
-Accept-Charset                    | Charset type like "UTF-8"                        | Default is UTF-8, but services SHOULD be able to handle ISO-8859-1.
+Accept-Charset                    | Charset type like "UTF-8"                        | Default is UTF-8
 Content-Type                      | Content type                                     | Mime type of request body (PUT/POST/PATCH)
 Prefer                            | return=minimal, return=representation            | If the return=minimal preference is specified, services SHOULD return an empty body in response to a successful insert or update. If return=representation is specified, services SHOULD return the created or updated resource in the response. Services SHOULD support this header if they have scenarios where clients would sometimes benefit from responses, but sometimes the response would impose too much of a hit on bandwidth.
 If-Match, If-None-Match, If-Range | String                                           | Services that support updates to resources using optimistic concurrency control MUST support the If-Match header to do so. Services MAY also use other headers related to ETags as long as they follow the HTTP specification.
@@ -385,13 +387,12 @@ The following guidelines help maintain consistency across usage of custom header
 Headers that are not standard HTTP headers MUST have one of two formats:
 
 1. A generic format for headers that are registered as "provisional" with IANA ([RFC 3864][rfc-3864])
-2. A scoped format for headers that are too usage-specific for registration
+2. A scoped format for headers that are too usage-specific for registration (Must start with `Okta-`)
 
 These two formats are described below.
 
 ### 7.8 Specifying headers as query parameters
-Some headers pose challenges for some scenarios such as AJAX clients, especially when making cross-domain calls where adding headers MAY not be supported.
-As such, some headers MAY be accepted as Query Parameters in addition to headers, with the same naming as the header:
+Some headers pose challenges for some scenarios such as AJAX clients, especially when making cross-domain calls where adding headers MAY not be supported. As such, some headers MAY be accepted as Query Parameters in addition to headers, with the same naming as the header:
 
 Not all headers make sense as query parameters, including most standard HTTP headers.
 
@@ -415,7 +416,7 @@ For organizations to have a successful platform, they must serve data in formats
 
 Web-based communication, especially when a mobile or other low-bandwidth client is involved, has moved quickly in the direction of JSON for a variety of reasons, including its tendency to be lighter weight and its ease of consumption with JavaScript-based clients.
 
-JSON property names SHOULD be camelCased.  There are cases where properties MAY be snake_cased to emulate protocol configuration.
+JSON property names SHOULD be camelCased.  There are cases where properties MAY be snake_cased to emulate protocol configuration, such as OAuth 2.0.
 
 Services SHOULD provide JSON as the default encoding.
 
@@ -480,11 +481,11 @@ Property | Type | Required | Description
 
 Property | Type | Required | Description
 -------- | ---- | -------- | -----------
-`errorSummary` | String | ✔ | A more specific error code than was provided by the containing error.
-`reason` | String (enumerated) | ✔ | An object containing more specific information than the current object about the error.
-`locationType` | String (enumerated) |  | An object containing more specific information than the current object about the error.
-`location` | String (enumerated) |  | An object containing more specific information than the current object about the error.
-`domain` | String (enumerated) | ✔ | An object containing more specific information than the current object about the error.
+`errorSummary` | String | ✔ | A more specific summary for the containing error cause.
+`reason` | String (enumerated) | ✔ | An enumerated value to represent the reason why the error occured. This enumeration allows codes to adapt to different conditions in which an error code can occur.
+`locationType` | String (enumerated) |  | A value that represents where the error cause occurred. For example, in the body or header of the request.  This value is not required for cases where the request is correct, but there was another reason why the error occurred (server-side state conflict, rate limit violation, etc.)
+`location` | String (enumerated) |  | A value that represents the key where the error cause occured.  This is used with `locationType` to give a holistic view of where the error cause occured.  For example, if `locationType` is `body` and the `location` is `username` and the reason was `UNIQUE_CONTRAINT`, you can derive that the username was already taken.
+`domain` | String (enumerated) | ✔ | A value that represents the domain of the service in which the error occurs. This value is used to isolate the error cause `reason`
 
 ##### Examples
 
@@ -535,34 +536,33 @@ In this example there were multiple problems with the request, with each individ
 Standard HTTP Status Codes MUST be used; see the HTTP Status Code definitions for more information.
 
 ### 7.12 Client library optional
-Developers MUST be able to develop on a wide variety of platforms and languages, such as Windows, macOS, Linux, C#, Python, Node.js, and Ruby.
+Developers MUST be able to develop on a wide variety of platforms and languages. Languages such as Windows, macOS, Linux, C#, Python, Node.js, and Ruby. Platforms like desktop, browser, native mobile, and devices.
 
-Services SHOULD be able to be accessed from simple HTTP tools such as curl without significant effort.
+Services SHOULD be able to be accessed from simple HTTP tools such as cURL or httpie without significant effort.
 
-Service developer portals SHOULD provide the equivalent of "Get Developer Token" to facilitate experimentation and curl support.
+Service developer portals SHOULD provide the equivalent of "Get Developer Token", or "Personal Access Token" to facilitate experimentation and curl support.
 
 ## 8 CORS
 Services compliant with the Okta REST API Guidelines MUST support [CORS (Cross Origin Resource Sharing)][cors].
-Services SHOULD support an allowed origin of CORS * and enforce authorization through valid OAuth tokens.
-Services SHOULD NOT support user credentials with origin validation.
-There MAY be exceptions for special cases.
+Services SHOULD support an allowed origin of CORS * and enforce authorization through valid OAuth 2.0 tokens.
+Services MUST NOT support user credentials with origin validation.
+
+There MAY be exceptions for special cases, for example, services that aren't intended for browsers.
 
 ### 8.1 Client guidance
 Web developers usually don't need to do anything special to take advantage of CORS.
 All of the handshake steps happen invisibly as part of the standard XMLHttpRequest calls they make.
 
-Many other platforms, such as .NET, have integrated support for CORS.
-
 #### 8.1.1 Avoiding preflight
 Because the CORS protocol can trigger preflight requests that add additional round trips to the server, performance-critical apps might be interested in avoiding them.
-The spirit behind CORS is to avoid preflight for any simple cross-domain requests that old non-CORS-capable browsers were able to make.
-All other requests require preflight.
+The spirit behind CORS is to avoid preflight for any simple cross-domain requests that old non-CORS-capable browsers were able to make. All other requests require preflight.
 
-A request is "simple" and avoids preflight if its method is GET, HEAD or POST, and if it doesn't contain any request headers besides Accept, Accept-Language and Content-Language.
-For POST requests, the Content-Type header is also allowed, but only if its value is "application/x-www-form-urlencoded," "multipart/form-data" or "text/plain."
-For any other headers or values, a preflight request will happen.
+A request can be "simple" and avoids preflight.  For more information about the requirements, see MDN's [reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#Simple_requests)
 
 ### 8.2 Service guidance
+
+Even though the Okta Service code base has a CORS framework to alleviate individual services from implementing the guidelines below, the guidelines are still useful for other services or acquisitions.
+
  At minimum, services MUST:
 - Understand the Origin request header that browsers send on cross-domain requests, and the Access-Control-Request-Method request header that they send on preflight OPTIONS requests that check for access.
 - If the Origin header is present in a request:
@@ -582,36 +582,24 @@ Services used by interactive Web clients where performance is critical SHOULD av
   - The Authorization header is not part of the simple set, so the authentication token MUST be sent through the "access_token" query parameter instead, for resources requiring authentication. Note that passing authentication tokens in the URL is not recommended, because it can lead to the token getting recorded in server logs and exposed to anyone with access to those logs. Services that accept authentication tokens through the URL MUST take steps to mitigate the security risks, such as using short-lived authentication tokens, suppressing the auth token from getting logged, and controlling access to server logs.
 
 - Avoid requiring cookies. XmlHttpRequest will only send cookies on cross-domain requests if the "withCredentials" attribute is set; this also causes a preflight request.
-  - Services that require cookie-based authentication MUST use a "dynamic canary" to secure all APIs that accept cookies.
+  - Services that require cookie-based authentication MUST use XSRF protection to secure all APIs that accept cookies.
 
-- For POST calls, prefer simple Content-Types in the set of ("application/x-www-form-urlencoded," "multipart/form-data," "text/plain") where applicable. Any other Content-Type will induce a preflight request.
-  - Services MUST NOT contravene other API recommendations in the name of avoiding CORS preflight requests. In particular, in accordance with recommendations, most POST requests will actually require a preflight request due to the Content-Type.
-  - If eliminating preflight is critical, then a service MAY support alternative mechanisms for data transfer, but the RECOMMENDED approach MUST also be supported.
-
-In addition, when appropriate services MAY support the JSONP pattern for simple, GET-only cross-domain access.
-In JSONP, services take a parameter indicating the format (_$format=json_) and a parameter indicating a callback (_$callback=someFunc_), and return a text/javascript document containing the JSON response wrapped in a function call with the indicated name.
-More on JSONP at Wikipedia: [JSONP](https://en.wikipedia.org/wiki/JSONP).
 
 ## 9 Collections
 ### 9.1 Item keys
-Services MAY support durable identifiers for each item in the collection, and that identifier SHOULD be represented in JSON as "id". These durable identifiers are often used as item keys.
-
-Collections that support durable identifiers MAY support delta queries.
+Services MUST support durable identifiers for each item in the collection, and that identifier SHOULD be represented in JSON as "id". These durable identifiers are often used as item keys.
 
 ### 9.2 Serialization
-Collections are represented in JSON using standard array notation.
+Collections are represented in JSON using standard array notation. When accessing a collection, the returned object is an array.  Since it is not an JSON object, services MAY store metadata about the collection in the response headers.
 
 ### 9.3 Collection URL patterns
-Collections are located directly under the service root when they are top level, or as a segment under another resource when scoped to that resource.
-
-For example:
+Collections are located directly under the service root when they are top level, or as a segment under another resource when scoped to that resource.  They SHOULD represent the plural of the represented resource.  For example, "people" for a collection of person resources, or "groups" for a collection of group resources.  
 
 ```http
-GET https://example.okta.com/v1.0/people
+GET https://example.okta.com/api/v1/people
 ```
 
-Whenever possible, services MUST support the "/" pattern.
-For example:
+Whenever possible, services MUST support the the following pattern for representing resources in a collection.
 
 ```http
 GET https://{serviceRoot}/{collection}/{id}
@@ -623,78 +611,69 @@ Where:
 - {id} – the value of the unique id property. When using the "/" pattern this MUST be the raw string/number/guid value with no quoting but properly escaped to fit in a URL segment.
 
 #### 9.3.1    Nested collections and properties
-Collection items MAY contain other collections.
-For example, a user collection MAY contain user resources that have multiple addresses:
+Collections MAY contain other collections nested under a resource.
+For example, a user collection MAY contain user resources that have multiple factors:
 
 ```http
-GET https://example.okta.com/v1.0/people/123/addresses
+GET https://example.okta.com/v1/users/123/factors
 ```
 
 ```json
-{
-  "value": [
-    { "street": "1st Avenue", "city": "Seattle" },
-    { "street": "124th Ave NE", "city": "Redmond" }
-  ]
-}
+[
+	{
+		"id": "A6D07C26FAC24629B72507848EB4EA95",
+		"factorType": "sms"
+	},{
+			"id": "A6F18CC41FF94C4FB6EF1BF30A9AC4E9",
+			"factorType": "email"
+	}
+]
 ```
 
 ### 9.4 Big collections
-As data grows, so do collections.
-Planning for pagination is important for all services.
-Therefore, when multiple pages are available, the serialization payload MUST contain the opaque URL for the next page as appropriate.
+As data grows, so do collections. When multiple pages are available, the Link header MUST contain the appropriate headers for the client to page
+
 Refer to the paging guidance for more details.
 
 Clients MUST be resilient to collection data being either paged or nonpaged for any given request.
 
-```json
-{
-  "value":[
-    { "id": "Item 1","price": 99.95,"sizes": null},
-    { … },
-    { … },
-    { "id": "Item 99","price": 59.99,"sizes": null}
-  ],
-  "@nextLink": "{opaqueUrl}"
-}
-```
-
 ### 9.5 Changing collections
-POST requests are not idempotent.
-This means that two POST requests sent to a collection resource with exactly the same payload MAY lead to multiple items being created in that collection.
+POST requests are not idempotent. This means that two POST requests sent to a collection resource with exactly the same payload MAY lead to multiple items being created in that collection.
 This is often the case for insert operations on items with a server-side generated id.
 
 For example, the following request:
 
 ```http
-POST https://example.okta.com/v1.0/people
+POST https://example.okta.com/v1/people
 ```
 
 Would lead to a response indicating the location of the new collection item:
 
 ```http
 201 Created
-Location: https://example.okta.com/v1.0/people/123
+Location: https://example.okta.com/v1/people/123
 ```
 
 And once executed again, would likely lead to another resource:
 
 ```http
 201 Created
-Location: https://example.okta.com/v1.0/people/124
+Location: https://example.okta.com/v1/people/124
 ```
 
 While a PUT request would require the indication of the collection item with the corresponding key instead:
 
 ```http
-PUT https://example.okta.com/v1.0/people/123
+PUT https://example.okta.com/v1/people/123
 ```
+
+Clients MUST be resilient to a collection that changes sizes.
 
 ### 9.6 Sorting collections
 The results of a collection query MAY be sorted based on property values.
-The property is determined by the value of the _$orderBy_ query parameter.
+The property is determined by the value of the `orderBy` query parameter.
 
-The value of the _$orderBy_ parameter contains a comma-separated list of expressions used to sort the items.
+The value of the `orderBy` parameter contains a comma-separated list of expressions used to sort the items.
 A special case of such an expression is a property path terminating on a primitive property.
 
 The expression MAY include the suffix "asc" for ascending or "desc" for descending, separated from the property name by one or more spaces.
@@ -708,7 +687,7 @@ The sort order is the inherent order for the type of the property.
 For example:
 
 ```http
-GET https://example.okta.com/v1.0/people?$orderBy=name
+GET https://example.okta.com/v1/people?orderBy=name
 ```
 
 Will return all people sorted by name in ascending order.
@@ -716,7 +695,7 @@ Will return all people sorted by name in ascending order.
 For example:
 
 ```http
-GET https://example.okta.com/v1.0/people?$orderBy=name desc
+GET https://example.okta.com/v1/people?orderBy=name desc
 ```
 
 Will return all people sorted by name in descending order.
@@ -726,7 +705,7 @@ Sub-sorts can be specified by a comma-separated list of property names with OPTI
 For example:
 
 ```http
-GET https://example.okta.com/v1.0/people?$orderBy=name desc,hireDate
+GET https://example.okta.com/v1/people?orderBy=name desc,hireDate
 ```
 
 Will return all people sorted by name in descending order and a secondary sort order of hireDate in ascending order.
@@ -734,7 +713,7 @@ Will return all people sorted by name in descending order and a secondary sort o
 Sorting MUST compose with filtering such that:
 
 ```http
-GET https://example.okta.com/v1.0/people?$filter=name eq 'david'&$orderBy=hireDate
+GET https://example.okta.com/v1/people?filter=name eq 'david'&$orderBy=hireDate
 ```
 
 Will return all people whose name is David sorted in ascending order by hireDate.
@@ -742,37 +721,37 @@ Will return all people whose name is David sorted in ascending order by hireDate
 #### 9.6.1 Interpreting a sorting expression
 Sorting parameters MUST be consistent across pages, as both client and server-side paging is fully compatible with sorting.
 
-If a service does not support sorting by a property named in a _$orderBy_ expression, the service MUST respond with an error message as defined in the Responding to Unsupported Requests section.
+If a service does not support sorting by a property named in a `orderBy` expression, the service MUST respond with an error message as defined in the _Responding to Unsupported Requests_ section.
 
 ### 9.7 Filtering
-The _$filter_ querystring parameter allows clients to filter a collection of resources that are addressed by a request URL.
-The expression specified with _$filter_ is evaluated for each resource in the collection, and only items where the expression evaluates to true are included in the response.
+The `filter` query string parameter allows clients to filter a collection of resources that are addressed by a request URL.
+The expression specified with `filter` is evaluated for each resource in the collection, and only items where the expression evaluates to true are included in the response.
 Resources for which the expression evaluates to false or to null, or which reference properties that are unavailable due to permissions, are omitted from the response.
 
 Example: return all Products whose Price is less than $10.00
 
 ```http
-GET https://example.okta.com/v1.0/products?$filter=price lt 10.00
+GET https://example.okta.com/v1/products?filter=price lt 10.00
 ```
 
-The value of the _$filter_ option is a Boolean expression.
+The value of the `filter` option is a Boolean expression.
 
 #### 9.7.1 Filter operations
-Services that support _$filter_ SHOULD support the following minimal set of operations.
+Services that support `filter` MUST support the following minimal set of operations.
 
 Operator             | Description           | Example
 -------------------- | --------------------- | -----------------------------------------------------
 Comparison Operators |                       |
 eq                   | Equal                 | city eq 'Redmond'
-ne                   | Not equal             | city ne 'London'
 gt                   | Greater than          | price gt 20
 ge                   | Greater than or equal | price ge 10
 lt                   | Less than             | price lt 20
 le                   | Less than or equal    | price le 100
+pr  								 | Value is presented		 | price pr
+sw									 | Value starts with     | city sw 'Red'
 Logical Operators    |                       |
 and                  | Logical and           | price le 200 and price gt 3.5
 or                   | Logical or            | price le 3.5 or price gt 200
-not                  | Logical negation      | not price le 3.5
 Grouping Operators   |                       |
 ( )                  | Precedence grouping   | (priority eq 1 or city eq 'Redmond') and price gt 100
 
@@ -782,31 +761,31 @@ The following examples illustrate the use and semantics of each of the logical o
 Example: all products with a name equal to 'Milk'
 
 ```http
-GET https://example.okta.com/v1.0/products?$filter=name eq 'Milk'
+GET https://example.okta.com/v1/products?$filter=name eq 'Milk'
 ```
 
-Example: all products with a name not equal to 'Milk'
+Example: all products with a name starts with 'Mi'
 
 ```http
-GET https://example.okta.com/v1.0/products?$filter=name ne 'Milk'
+GET https://example.okta.com/v1/products?$filter=name sw 'Mi'
 ```
 
 Example: all products with the name 'Milk' that also have a price less than 2.55:
 
 ```http
-GET https://example.okta.com/v1.0/products?$filter=name eq 'Milk' and price lt 2.55
+GET https://example.okta.com/v1/products?$filter=name eq 'Milk' and price lt 2.55
 ```
 
 Example: all products that either have the name 'Milk' or have a price less than 2.55:
 
 ```http
-GET https://example.okta.com/v1.0/products?$filter=name eq 'Milk' or price lt 2.55
+GET https://example.okta.com/v1/products?$filter=name eq 'Milk' or price lt 2.55
 ```
 
-Example 54: all products that have the name 'Milk' or 'Eggs' and have a price less than 2.55:
+Example: all products that have the name 'Milk' or 'Eggs' and have a price less than 2.55:
 
 ```http
-GET https://example.okta.com/v1.0/products?$filter=(name eq 'Milk' or name eq 'Eggs') and price lt 2.55
+GET https://example.okta.com/v1/products?$filter=(name eq 'Milk' or name eq 'Eggs') and price lt 2.55
 ```
 
 #### 9.7.3 Operator precedence
@@ -817,13 +796,11 @@ Operators in the same category have equal precedence:
 | Group           | Operator | Description           |
 |:----------------|:---------|:----------------------|
 | Grouping        | ( )      | Precedence grouping   |
-| Unary           | not      | Logical Negation      |
 | Relational      | gt       | Greater Than          |
 |                 | ge       | Greater than or Equal |
 |                 | lt       | Less Than             |
 |                 | le       | Less than or Equal    |
 | Equality        | eq       | Equal                 |
-|                 | ne       | Not Equal             |
 | Conditional AND | and      | Logical And           |
 | Conditional OR  | or       | Logical Or            |
 
@@ -835,44 +812,39 @@ There are two forms of pagination that MAY be supported by RESTful APIs.
 Server-driven paging mitigates against denial-of-service attacks by forcibly paginating a request over multiple response payloads.
 Client-driven paging enables clients to request only the number of resources that it can use at a given time.
 
-Sorting and Filtering parameters MUST be consistent across pages, because both client- and server-side paging is fully compatible with both filtering and sorting.
+Sorting and Filtering parameters MUST be consistent across pages, because both client and server-side paging is fully compatible with both filtering and sorting.
 
 #### 9.8.1 Server-driven paging
-Paginated responses MUST indicate a partial result by including a continuation token in the response.
-The absence of a continuation token means that no additional pages are available.
+Paginated responses MUST indicate a partial result by including Link header with the relation of `next` (rel="next")
 
-Clients MUST treat the continuation URL as opaque, which means that query options may not be changed while iterating over a set of partial results.
+The absence of a Link header with the relation of `next` means there are no additional pages are available.
+
+Clients MUST treat the pagination Link header as opaque, which means that query options may not be changed while iterating over a set of partial results.
 
 Example:
 
 ```http
-GET http://example.okta.com/v1.0/people HTTP/1.1
+GET http://example.okta.com/v1/people HTTP/1.1
 Accept: application/json
 
 HTTP/1.1 200 OK
 Content-Type: application/json
+Link: <http://example.okta.com/v1/people?after=00ubfjQEMYBLRUWIEDKK>; rel="next"
 
 {
-  ...,
-  "value": [...],
-  "@nextLink": "{opaqueUrl}"
+  ...
 }
 ```
 
 #### 9.8.2 Client-driven paging
-Clients MAY use _$top_ and _$skip_ query parameters to specify a number of results to return and an offset into the collection.
+Clients MAY use `limit` query parameters to specify a number of results to return.
 
-The server SHOULD honor the values specified by the client; however, clients MUST be prepared to handle responses that contain a different page size or contain a continuation token.
-
-When both _$top_ and _$skip_ are given by a client, the server SHOULD first apply _$skip_ and then _$top_ on the collection.
-
-Note: If the server can't honor _$top_ and/or _$skip_, the server MUST return an error to the client informing about it instead of just ignoring the query options.
-This will avoid the risk of the client making assumptions about the data returned.
+The server SHOULD honor the values specified by the client; however, clients MUST be prepared to handle responses that contain a different page size or contain a `next` Link header.
 
 Example:
 
 ```http
-GET http://example.okta.com/v1.0/people?$top=5&$skip=2 HTTP/1.1
+GET http://example.okta.com/v1/people?limit=10 HTTP/1.1
 Accept: application/json
 
 HTTP/1.1 200 OK
@@ -892,16 +864,8 @@ The server MUST supplement any specified order criteria with additional sorts (t
 Clients MUST be prepared to deal with these discrepancies.
 The server SHOULD always encode the record ID of the last read record, helping the client in the process of managing repeated/missing results.
 
-**Combining client- and server-driven paging:** Note that client-driven paging does not preclude server-driven paging.
+**Combining client and server-driven paging:** Note that client-driven paging does not preclude server-driven paging.
 If the page size requested by the client is larger than the default page size supported by the server, the expected response would be the number of results specified by the client, paginated as specified by the server paging settings.
-
-**Page Size:** Clients MAY request server-driven paging with a specific page size by specifying a _$maxpagesize_ preference.
-The server SHOULD honor this preference if the specified page size is smaller than the server's default page size.
-
-**Paginating embedded collections:** It is possible for both client-driven paging and server-driven paging to be applied to embedded collections.
-If a server paginates an embedded collection, it MUST include additional continuation tokens as appropriate.
-
-**Recordset count:** Developers who want to know the full number of records across all pages, MAY include the query parameter _$count=true_ to tell the server to include the count of items in the response.
 
 ### 9.9 Compound collection operations
 Filtering, Sorting and Pagination operations MAY all be performed against a given collection.
@@ -943,7 +907,7 @@ A delta link is obtained by querying a collection or entity and appending a $del
 For example:
 
 ```http
-GET https://example.okta.com/v1.0/people?$delta
+GET https://example.okta.com/v1/people?$delta
 HTTP/1.1
 Accept: application/json
 
@@ -1150,7 +1114,7 @@ For example, to repeat the interval of "P1Y2M10DT2H30M" five times starting at "
 Services are versioned using a Major.Minor versioning scheme.
 Services MAY opt for a "Major" only version scheme in which case the ".0" is implied and all other rules in this section apply.
 Two options for specifying the version of a REST API request are supported:
-- Embedded in the path of the request URL, at the end of the service root: `https://example.okta.com/v1.0/products/users`
+- Embedded in the path of the request URL, at the end of the service root: `https://example.okta.com/v1/products/users`
 - As a query string parameter of the URL: `https://example.okta.com/products/users?api-version=1.0`
 
 Guidance for choosing between the two options is as follows:
@@ -1259,7 +1223,7 @@ While most operations are likely to be POST semantics, In addition to POST seman
 For example, a user that wants to create a database named "db1" could call:
 
 ```http
-PUT https://example.okta.com/v1.0/databases/db1
+PUT https://example.okta.com/v1/databases/db1
 ```
 
 In this scenario the databases segment is processing the PUT operation.
@@ -1286,14 +1250,14 @@ In other words, APIs must adopt and stick with a LRO pattern and not change patt
 Services MAY enable PUT requests for entity creation.
 
 ```http
-PUT https://example.okta.com/v1.0/databases/db1
+PUT https://example.okta.com/v1/databases/db1
 ```
 
 In this scenario the _databases_ segment is processing the PUT operation.
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: https://example.okta.com/v1.0/operations/123
+Operation-Location: https://example.okta.com/v1/operations/123
 ```
 
 For services that need to return a 201 Created here, use the hybrid flow described below.
@@ -1305,7 +1269,7 @@ The 201 Created case should return the body of the target resource.
 Services MAY enable POST requests for entity creation.
 
 ```http
-POST https://example.okta.com/v1.0/databases/
+POST https://example.okta.com/v1/databases/
 
 {
   "fileName": "someFile.db",
@@ -1315,7 +1279,7 @@ POST https://example.okta.com/v1.0/databases/
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: https://example.okta.com/v1.0/operations/123
+Operation-Location: https://example.okta.com/v1/operations/123
 ```
 
 #### 13.2.3 POST, hybrid model
@@ -1325,7 +1289,7 @@ In order to use this pattern, the response MUST include a representation of the 
 For example:
 
 ```http
-POST https://example.okta.com/v1.0/databases/ HTTP/1.1
+POST https://example.okta.com/v1/databases/ HTTP/1.1
 Host: example.okta.com
 Content-Type: application/json
 Accept: application/json
@@ -1341,8 +1305,8 @@ In this case the status property in the response payload also indicates the oper
 
 ```http
 HTTP/1.1 201 Created
-Location: https://example.okta.com/v1.0/databases/db1
-Operation-Location: https://example.okta.com/v1.0/operations/123
+Location: https://example.okta.com/v1/databases/db1
+Operation-Location: https://example.okta.com/v1/operations/123
 
 {
   "databaseName": "db1",
@@ -1435,7 +1399,7 @@ For operations that result in, or manipulate, a resource the service MUST includ
   "createdDateTime": "2015-06-19T12-01-03.45Z",
   "lastActionDateTime": "2015-06-19T12-06-03.0024Z",
   "status": "succeeded",
-  "resourceLocation": "https://example.okta.com/v1.0/databases/db1"
+  "resourceLocation": "https://example.okta.com/v1/databases/db1"
 }
 ```
 
@@ -1452,7 +1416,7 @@ Services MAY choose to delete tombstones after a service defined period of time.
 Client invokes the restart action:
 
 ```http
-POST https://example.okta.com/v1.0/databases HTTP/1.1
+POST https://example.okta.com/v1/databases HTTP/1.1
 Accept: application/json
 
 {
@@ -1465,13 +1429,13 @@ The server response indicates the request has been created.
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: https://example.okta.com/v1.0/operations/123
+Operation-Location: https://example.okta.com/v1/operations/123
 ```
 
 Client waits for a period of time then invokes another request to try to get the operation status.
 
 ```http
-GET https://example.okta.com/v1.0/operations/123
+GET https://example.okta.com/v1/operations/123
 Accept: application/json
 ```
 
@@ -1490,7 +1454,7 @@ Retry-After: 30
 Client waits the recommended 30 seconds and then invokes another request to get the results of the operation.
 
 ```http
-GET https://example.okta.com/v1.0/operations/123
+GET https://example.okta.com/v1/operations/123
 Accept: application/json
 ```
 
@@ -1504,7 +1468,7 @@ Content-Type: application/json
   "createdDateTime": "2015-06-19T12-01-03.45Z",
   "lastActionDateTime": "2015-06-19T12-06-03.0024Z",
   "status": "succeeded",
-  "resourceLocation": "https://example.okta.com/v1.0/databases/db1"
+  "resourceLocation": "https://example.okta.com/v1/databases/db1"
 }
 ```
 
@@ -1519,7 +1483,7 @@ Client invokes the backup action.
 The client already has a push notification subscription setup for db1.
 
 ```http
-POST https://example.okta.com/v1.0/databases/db1?backup HTTP/1.1
+POST https://example.okta.com/v1/databases/db1?backup HTTP/1.1
 Accept: application/json
 ```
 
@@ -1527,7 +1491,7 @@ The server response indicates the request has been accepted.
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: https://example.okta.com/v1.0/operations/123
+Operation-Location: https://example.okta.com/v1/operations/123
 ```
 
 The caller ignores all the headers in the return.
@@ -1543,7 +1507,7 @@ Content-Type: application/json
     {
       "subscriptionId": "1234-5678-1111-2222",
       "context": "subscription context that was specified at setup",
-      "resourceUrl": "https://example.okta.com/v1.0/databases/db1",
+      "resourceUrl": "https://example.okta.com/v1/databases/db1",
       "userId" : "contoso.com/user@contoso.com",
       "tenantId" : "contoso.com"
     }
@@ -1558,7 +1522,7 @@ The HTTP specification allows the Retry-After header to alternatively specify a 
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: http://example.okta.com/v1.0/operations/123
+Operation-Location: http://example.okta.com/v1/operations/123
 Retry-After: 60
 ```
 
@@ -1697,7 +1661,7 @@ For a firehose subscription, a concrete example of this may look like:
   "value": [
     {
       "subscriptionId": "32b8cbd6174ab18b",
-      "resource": "https://example.okta.com/v1.0/users/user@contoso.com/files?$delta",
+      "resource": "https://example.okta.com/v1/users/user@contoso.com/files?$delta",
       "userId" : "<User GUID>",
       "tenantId" : "<Tenant Id>"
     }
@@ -1714,7 +1678,7 @@ For a per-user subscription, a concrete example of this may look like:
       "subscriptionId": "32b8cbd6174ab183",
       "clientState": "clientOriginatedOpaqueToken",
       "expirationDateTime": "2016-02-04T11:23Z",
-      "resource": "https://example.okta.com/v1.0/users/user@contoso.com/files/$delta",
+      "resource": "https://example.okta.com/v1/users/user@contoso.com/files/$delta",
       "userId" : "<User GUID>",
       "tenantId" : "<Tenant Id>"
     },
@@ -1722,7 +1686,7 @@ For a per-user subscription, a concrete example of this may look like:
       "subscriptionId": "97b391179fa22",
       "clientState ": "clientOriginatedOpaqueToken",
       "expirationDateTime": "2016-02-04T11:23Z",
-      "resource": "https://example.okta.com/v1.0/users/user@contoso.com/files/$delta",
+      "resource": "https://example.okta.com/v1/users/user@contoso.com/files/$delta",
       "userId" : "<User GUID>",
       "tenantId" : "<Tenant Id>"
     }
@@ -1783,11 +1747,11 @@ The combination of properties scoped to the auth token, provides a uniqueness co
 Below is an example request using a User + Application principal to subscribe to notifications from a file:
 
 ```http
-POST https://example.okta.com/files/v1.0/$subscriptions HTTP 1.1
+POST https://example.okta.com/files/v1/$subscriptions HTTP 1.1
 Authorization: Bearer {UserPrincipalBearerToken}
 
 {
-  "resource": "http://api.service.com/v1.0/files/file1.txt",
+  "resource": "http://api.service.com/v1/files/file1.txt",
   "notificationUrl": "https://contoso.com/myCallbacks",
   "clientState": "clientOriginatedOpaqueToken"
 }
@@ -1805,7 +1769,7 @@ The service SHOULD respond to such a message with a response format minimally li
 Below is an example using an Application-Only principal where the application is watching all files to which it's authorized:
 
 ```http
-POST https://example.okta.com/files/v1.0/$subscriptions HTTP 1.1
+POST https://example.okta.com/files/v1/$subscriptions HTTP 1.1
 Authorization: Bearer {ApplicationPrincipalBearerToken}
 
 {
@@ -1835,7 +1799,7 @@ As with creation, subscriptions are individually managed.
 The following request changes the notification URL of an existing subscription:
 
 ```http
-PATCH https://example.okta.com/files/v1.0/$subscriptions/{id} HTTP 1.1
+PATCH https://example.okta.com/files/v1/$subscriptions/{id} HTTP 1.1
 Authorization: Bearer {UserPrincipalBearerToken}
 
 {
@@ -1857,7 +1821,7 @@ Services MUST support deleting subscriptions.
 Existing subscriptions can be deleted by making a DELETE request against the subscription resource:
 
 ```http
-DELETE https://example.okta.com/files/v1.0/$subscriptions/{id} HTTP 1.1
+DELETE https://example.okta.com/files/v1/$subscriptions/{id} HTTP 1.1
 Authorization: Bearer {UserPrincipalBearerToken}
 ```
 
@@ -1867,7 +1831,7 @@ As with update, the service MUST return `204 No Content` for a successful delete
 To get a list of active subscriptions, clients issue a GET request against the subscriptions resource using a User + Application or Application-Only bearer token:
 
 ```http
-GET https://example.okta.com/files/v1.0/$subscriptions HTTP 1.1
+GET https://example.okta.com/files/v1/$subscriptions HTTP 1.1
 Authorization: Bearer {UserPrincipalBearerToken}
 ```
 
@@ -1878,7 +1842,7 @@ The service MUST return a format as below using a User + Application principal b
   "value": [
     {
       "id": "32b8cbd6174ab18b",
-      "resource": " http://example.okta.com/v1.0/files/file1.txt",
+      "resource": " http://example.okta.com/v1/files/file1.txt",
       "notificationUrl": "https://contoso.com/myCallbacks",
       "clientState": "clientOriginatedOpaqueToken",
       "expirationDateTime": "2016-02-04T11:23Z"
@@ -1930,12 +1894,12 @@ Similarly, some APIs will expose collections but require or otherwise limit filt
 ### 15.2 Feature allow list
 If a service does not support any of the below API features, then an error response MUST be provided if the feature is requested by a caller.
 The features are:
-- Key Addressing in a collection, such as: `https://example.okta.com/v1.0/people/user1@contoso.com`
-- Filtering a collection by a property value, such as: `https://example.okta.com/v1.0/people?$filter=name eq 'david'`
-- Filtering a collection by range, such as: `http://example.okta.com/v1.0/people?$filter=hireDate ge 2014-01-01 and hireDate le 2014-12-31`
-- Client-driven pagination via $top and $skip, such as: `http://example.okta.com/v1.0/people?$top=5&$skip=2`
-- Sorting by $orderBy, such as: `https://example.okta.com/v1.0/people?$orderBy=name desc`
-- Providing $delta tokens, such as: `https://example.okta.com/v1.0/people?$delta`
+- Key Addressing in a collection, such as: `https://example.okta.com/v1/people/user1@contoso.com`
+- Filtering a collection by a property value, such as: `https://example.okta.com/v1/people?$filter=name eq 'david'`
+- Filtering a collection by range, such as: `http://example.okta.com/v1/people?$filter=hireDate ge 2014-01-01 and hireDate le 2014-12-31`
+- Client-driven pagination via $top and $skip, such as: `http://example.okta.com/v1/people?$top=5&$skip=2`
+- Sorting by $orderBy, such as: `https://example.okta.com/v1/people?$orderBy=name desc`
+- Providing $delta tokens, such as: `https://example.okta.com/v1/people?$delta`
 
 #### 15.2.1 Error response
 Services MUST provide an error response if a caller requests an unsupported feature found in the feature allow list.
@@ -1946,7 +1910,7 @@ Services SHOULD include enough detail in the response message for a developer to
 Example:
 
 ```http
-GET https://example.okta.com/v1.0/people?$orderBy=name HTTP/1.1
+GET https://example.okta.com/v1/people?$orderBy=name HTTP/1.1
 Accept: application/json
 ```
 
