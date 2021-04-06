@@ -6,12 +6,6 @@
 | Tom Abbott (Prod Architect)  | Karl McGuinness (Chief Architect)      | Trevor Thompson (System Architect)       |
 
 
-<div style="font-size:150%">
-Document editors: Tom Abbott
-</div>
-
-
-
 # Okta REST API Guidelines
 ## 1 Abstract
 The Okta REST API Guidelines, as a design principle, encourages application developers to have resources accessible to them via a RESTful HTTP interface.
