@@ -13,105 +13,6 @@ To provide the smoothest possible experience for developers on platforms followi
 
 This document establishes the guidelines Okta REST APIs SHOULD follow so RESTful interfaces are developed consistently.
 
-## 2 Table of contents
-<!-- TOC depthFrom:1 depthTo:3 withLinks:1 updateOnSave:1 orderedList:0 -->
-
-- [Okta REST API Guidelines 2.3](#Okta-rest-api-guidelines-23)
-	- [Okta REST API Guidelines Working Group](#Okta-rest-api-guidelines-working-group)
-- [Okta REST API Guidelines](#Okta-rest-api-guidelines)
-	- [1 Abstract](#1-abstract)
-	- [2 Table of contents](#2-table-of-contents)
-	- [3 Introduction](#3-introduction)
-		- [3.1 Recommended reading](#31-recommended-reading)
-	- [4    Interpreting the guidelines](#4-interpreting-the-guidelines)
-		- [4.1    Application of the guidelines](#41-application-of-the-guidelines)
-		- [4.2    Guidelines for existing services and versioning of services](#42-guidelines-for-existing-services-and-versioning-of-services)
-		- [4.3    Requirements language](#43-requirements-language)
-		- [4.4    License](#44-license)
-	- [5 Taxonomy](#5-taxonomy)
-		- [5.1    Errors](#51-errors)
-		- [5.2    Faults](#52-faults)
-		- [5.3    Latency](#53-latency)
-		- [5.4    Time to complete](#54-time-to-complete)
-		- [5.5    Long running API faults](#55-long-running-api-faults)
-	- [6    Client guidance](#6-client-guidance)
-		- [6.1    Ignore rule](#61-ignore-rule)
-		- [6.2    Variable order rule](#62-variable-order-rule)
-		- [6.3    Silent fail rule](#63-silent-fail-rule)
-	- [7    Consistency fundamentals](#7-consistency-fundamentals)
-		- [7.1    URL structure](#71-url-structure)
-		- [7.2    URL length](#72-url-length)
-		- [7.3    Canonical identifier](#73-canonical-identifier)
-		- [7.4    Supported methods](#74-supported-methods)
-		- [7.5    Standard request headers](#75-standard-request-headers)
-		- [7.6    Standard response headers](#76-standard-response-headers)
-		- [7.7    Custom headers](#77-custom-headers)
-		- [7.8    Specifying headers as query parameters](#78-specifying-headers-as-query-parameters)
-		- [7.9    PII parameters](#79-pii-parameters)
-		- [7.10   Response formats](#710-response-formats)
-		- [7.11   HTTP Status Codes](#711-http-status-codes)
-		- [7.12   Client library optional](#712-client-library-optional)
-	- [8    CORS](#8-cors)
-		- [8.1    Client guidance](#81-client-guidance)
-		- [8.2    Service guidance](#82-service-guidance)
-	- [9    Collections](#9-collections)
-		- [9.1    Item keys](#91-item-keys)
-		- [9.2    Serialization](#92-serialization)
-		- [9.3    Collection URL patterns](#93-collection-url-patterns)
-		- [9.4    Big collections](#94-big-collections)
-		- [9.5    Changing collections](#95-changing-collections)
-		- [9.6    Sorting collections](#96-sorting-collections)
-		- [9.7    Filtering](#97-filtering)
-		- [9.8    Pagination](#98-pagination)
-		- [9.9    Compound collection operations](#99-compound-collection-operations)
-	- [10    Delta queries](#10-delta-queries)
-		- [10.1    Delta links](#101-delta-links)
-		- [10.2    Entity representation](#102-entity-representation)
-		- [10.3    Obtaining a delta link](#103-obtaining-a-delta-link)
-		- [10.4    Contents of a delta link response](#104-contents-of-a-delta-link-response)
-		- [10.5    Using a delta link](#105-using-a-delta-link)
-	- [11    JSON standardizations](#11-json-standardizations)
-		- [11.1    JSON formatting standardization for primitive types](#111-json-formatting-standardization-for-primitive-types)
-		- [11.2    Guidelines for dates and times](#112-guidelines-for-dates-and-times)
-		- [11.3    JSON serialization of dates and times](#113-json-serialization-of-dates-and-times)
-		- [11.4    Durations](#114-durations)
-		- [11.5    Intervals](#115-intervals)
-		- [11.6    Repeating intervals](#116-repeating-intervals)
-	- [12    Versioning](#12-versioning)
-		- [12.1    Versioning formats](#121-versioning-formats)
-		- [12.2    When to version](#122-when-to-version)
-		- [12.3    Definition of a breaking change](#123-definition-of-a-breaking-change)
-	- [13    Long running operations](#13-long-running-operations)
-		- [13.1    Resource based long running operations (RELO)](#131-resource-based-long-running-operations-relo)
-		- [13.2    Stepwise long running operations](#132-stepwise-long-running-operations)
-		- [13.3    Retention policy for operation results](#133-retention-policy-for-operation-results)
-	- [14    Push notifications via webhooks](#14-push-notifications-via-webhooks)
-		- [14.1    Scope](#141-scope)
-		- [14.2    Principles](#142-principles)
-		- [14.3    Types of subscriptions](#143-types-of-subscriptions)
-		- [14.4    Call sequences](#144-call-sequences)
-		- [14.5    Verifying subscriptions](#145-verifying-subscriptions)
-		- [14.6    Receiving notifications](#146-receiving-notifications)
-		- [14.7    Managing subscriptions programmatically](#147-managing-subscriptions-programmatically)
-		- [14.8    Security](#148-security)
-	- [15    Unsupported requests](#15-unsupported-requests)
-		- [15.1    Essential guidance](#151-essential-guidance)
-		- [15.2    Feature allow list](#152-feature-allow-list)
-	- [16    Naming guidelines](#16-naming-guidelines)
-		- [16.1    Approach](#161-approach)
-		- [16.2    Casing](#162-casing)
-		- [16.3    Names to avoid](#163-names-to-avoid)
-		- [16.4    Forming compound names](#164-forming-compound-names)
-		- [16.5    Identity properties](#165-identity-properties)
-		- [16.6    Date and time properties](#166-date-and-time-properties)
-		- [16.7    Name properties](#167-name-properties)
-		- [16.8    Collections and counts](#168-collections-and-counts)
-		- [16.9    Common property names](#169-common-property-names)
-	- [17     Appendix](#17-appendix)
-		- [17.1    Sequence diagram notes](#171-sequence-diagram-notes)
-
-<!-- /TOC -->
-
 ## 3 Introduction
 Developers access most Okta Cloud Platform resources via HTTP interfaces.
 Although the developer tooling (developer experience) team typically provides language-specific frameworks to wrap the APIs, all of their operations eventually boil down to HTTP requests.
@@ -825,9 +726,9 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 Link: <http://example.okta.com/v1/people?after=00ubfjQEMYBLRUWIEDKK>; rel="next"
 
-{
+[
   ...
-}
+]
 ```
 
 #### 9.8.2 Client-driven paging
@@ -869,93 +770,7 @@ When these operations are performed together, the evaluation order MUST be:
 2. **Sorting**. The potentially filtered list is sorted according to the sort criteria.
 3. **Pagination**. The materialized paginated view is presented over the filtered, sorted list. This applies to both server-driven pagination and client-driven pagination.
 
-## 10 Delta queries
-Services MAY choose to support delta queries.
 
-### 10.1 Delta links
-Delta links are opaque, service-generated links that the client uses to retrieve subsequent changes to a result.
-
-At a conceptual level delta links are based on a defining query that describes the set of results for which changes are being tracked.
-The delta link encodes the collection of entities for which changes are being tracked, along with a starting point from which to track changes.
-
-If the query contains a filter, the response MUST include only changes to entities matching the specified criteria.
-The key principles of the Delta Query are:
-- Every item in the set MUST have a persistent identifier. That identifier SHOULD be represented as "id". This identifier is a service defined opaque string that MAY be used by the client to track object across calls.
-- The delta MUST contain an entry for each entity that newly matches the specified criteria, and MUST contain a "@removed" entry for each entity that no longer matches the criteria.
-- Re-evaluate the query and compare it to original set of results; every entry uniquely in the current set MUST be returned as an Add operation, and every entry uniquely in the original set MUST be returned as a "remove" operation.
-- Each entity that previously did not match the criteria but matches it now MUST be returned as an "add"; conversely, each entity that previously matched the query but no longer does MUST be returned as a "@removed" entry.
-- Entities that have changed MUST be included in the set using their standard representation.
-- Services MAY add additional metadata to the "@removed" node, such as a reason for removal, or a "removed at" timestamp. We recommend teams coordinate with the Okta REST API Guidelines Working Group on extensions to help maintain consistency.
-
-The delta link MUST NOT encode any client top or skip value.
-
-### 10.2 Entity representation
-Added and updated entities are represented in the entity set using their standard representation.
-From the perspective of the set, there is no difference between an added or updated entity.
-
-Removed entities are represented using only their "id" and an "@removed" node.
-The presence of an "@removed" node MUST represent the removal of the entry from the set.
-
-### 10.3 Obtaining a delta link
-A delta link is obtained by querying a collection or entity and appending a $delta query string parameter.
-For example:
-
-```http
-GET https://example.okta.com/v1/people?$delta
-HTTP/1.1
-Accept: application/json
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{
-  "value":[
-    { "id": "1", "name": "Matt"},
-    { "id": "2", "name": "Mark"},
-    { "id": "3", "name": "John"},
-  ],
-  "@deltaLink": "{opaqueUrl}"
-}
-```
-
-Note: If the collection is paginated the deltaLink will only be present on the final page but MUST reflect any changes to the data returned across all pages.
-
-### 10.4 Contents of a delta link response
-Added/Updated entries MUST appear as regular JSON objects, with regular item properties.
-Returning the added/modified items in their regular representation allows the client to merge them into their existing "cache" using standard merge concepts based on the "id" field.
-
-Entries removed from the defined collection MUST be included in the response.
-Items removed from the set MUST be represented using only their "id" and an "@removed" node.
-
-### 10.5 Using a delta link
-The client requests changes by invoking the GET method on the delta link.
-The client MUST use the delta URL as is -- in other words the client MUST NOT modify the URL in any way (e.g., parsing it and adding additional query string parameters).
-In this example:
-
-```http
-GET https://{opaqueUrl} HTTP/1.1
-Accept: application/json
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{
-  "value":[
-    { "id": "1", "name": "Mat"},
-    { "id": "2", "name": "Marc"},
-    { "id": "3", "@removed": {} },
-    { "id": "4", "name": "Luc"}
-  ],
-  "@deltaLink": "{opaqueUrl}"
-}
-```
-
-The results of a request against the delta link may span multiple pages but MUST be ordered by the service across all pages in such a way as to ensure a deterministic result when applied in order to the response that contained the delta link.
-
-If no changes have occurred, the response is an empty collection that contains a delta link for subsequent changes if requested.
-This delta link MAY be identical to the delta link resulting in the empty collection of changes.
-
-If the delta link is no longer valid, the service MUST respond with _410 Gone_. The response SHOULD include a Location header that the client can use to retrieve a new baseline set of results.
 
 ## 11 JSON standardizations
 ### 11.1 JSON formatting standardization for primitive types
@@ -1107,66 +922,11 @@ For example, to repeat the interval of "P1Y2M10DT2H30M" five times starting at "
 ### 12.1 Versioning formats
 Services are versioned using a Major.Minor versioning scheme.
 Services MAY opt for a "Major" only version scheme in which case the ".0" is implied and all other rules in this section apply.
-Two options for specifying the version of a REST API request are supported:
+Okta uses the following option for specifying the version of a REST API:
 - Embedded in the path of the request URL, at the end of the service root: `https://example.okta.com/v1/products/users`
-- As a query string parameter of the URL: `https://example.okta.com/products/users?api-version=1.0`
-
-Guidance for choosing between the two options is as follows:
-
-1. Services co-located behind a DNS endpoint MUST use the same versioning mechanism.
-2. In this scenario, a consistent user experience across the endpoint is paramount. The Okta REST API Guidelines Working Group recommends that new top-level DNS endpoints are not created without explicit conversations with your organization's leadership team.
-3. Services that guarantee the stability of their REST API's URL paths, even through future versions of the API, MAY adopt the query string parameter mechanism. This means the naming and structure of the relationships described in the API cannot evolve after the API ships, even across versions with breaking changes.
-4. Services that cannot ensure URL path stability across future versions MUST embed the version in the URL path.
-
-Certain bedrock services such as Okta's Azure Active Directory may be exposed behind multiple endpoints.
-Such services MUST support the versioning mechanisms of each endpoint, even if that means supporting multiple versioning mechanisms.
-
-#### 12.1.1 Group versioning
-Group versioning is an OPTIONAL feature that MAY be offered on services using the query string parameter mechanism.
-Group versions allow for logical grouping of API endpoints under a common versioning moniker.
-This allows developers to look up a single version number and use it across multiple endpoints.
-Group version numbers are well known, and services SHOULD reject any unrecognized values.
-
-Internally, services will take a Group Version and map it to the appropriate Major.Minor version.
-
-The Group Version format is defined as YYYY-MM-DD, for example 2012-12-07 for December 7, 2012. This Date versioning format applies only to Group Versions and SHOULD NOT be used as an alternative to Major.Minor versioning.
-
-##### 12.1.1.1 Examples of group versioning
-
-| Group      | Major.Minor |
-|:-----------|:------------|
-| 2012-12-01 | 1.0         |
-|            | 1.1         |
-|            | 1.2         |
-| 2013-03-21 | 1.0         |
-|            | 2.0         |
-|            | 3.0         |
-|            | 3.1         |
-|            | 3.2         |
-|            | 3.3         |
-
-Version Format                | Example                | Interpretation
------------------------------ | ---------------------- | ------------------------------------------
-{groupVersion}                | 2013-03-21, 2012-12-01 | 3.3, 1.2
-{majorVersion}                | 3                      | 3.0
-{majorVersion}.{minorVersion} | 1.2                    | 1.2
-
-Clients can specify either the group version or the Major.Minor version:
-
-For example:
-
-```http
-GET http://example.okta.com/acct1/c1/blob2?api-version=1.0
-```
-
-```http
-PUT http://example.okta.com/acct1/c1/b2?api-version=2011-12-07
-```
 
 ### 12.2 When to version
-Services MUST increment their version number in response to any breaking API change.
-See the following section for a detailed discussion of what constitutes a breaking change.
-Services MAY increment their version number for nonbreaking changes as well, if desired.
+Services MUST increment their version number in response to any breaking API change.  It is advised to never break backwards compatbility unless there is a business reason to do so. Okta is still on version 1 of the Management API.
 
 Use a new major version number to signal that support for existing clients will be deprecated in the future.
 When introducing a new major version, services MUST provide a clear upgrade path for existing clients and develop a plan for deprecation that is consistent with their business group's policies.
@@ -1251,7 +1011,7 @@ In this scenario the _databases_ segment is processing the PUT operation.
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: https://example.okta.com/v1/operations/123
+Location: https://example.okta.com/v1/operations/123
 ```
 
 For services that need to return a 201 Created here, use the hybrid flow described below.
@@ -1273,7 +1033,7 @@ POST https://example.okta.com/v1/databases/
 
 ```http
 HTTP/1.1 202 Accepted
-Operation-Location: https://example.okta.com/v1/operations/123
+Location: https://example.okta.com/v1/operations/123
 ```
 
 #### 13.2.3 POST, hybrid model
